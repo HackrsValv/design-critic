@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Critic - AI Design Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 9999px;
+            font-weight: bold;
+        }
+        .score-low { background-color: #fecaca; color: #991b1b; }
+        .score-mid { background-color: #fef08a; color: #854d0e; }
+        .score-high { background-color: #bbf7d0; color: #166534; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Design Critic</h1>
+            <p class="text-gray-600 mt-2">AI-powered design review with BYOK support</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <form id="critiqueForm" class="space-y-6">
+                <!-- Input Type Tabs -->
+                <div class="border-b border-gray-200">
+                    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                        <button type="button" class="tab-btn active border-blue-500 text-blue-600 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-tab="html">
+                            HTML
+                        </button>
+                        <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-tab="url">
+                            Image URL
+                        </button>
+                        <button type="button" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm" data-tab="upload">
+                            Upload
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- HTML Input -->
+                <div id="tab-html" class="tab-content">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">HTML Content</label>
+                    <textarea id="htmlInput" rows="8" class="w-full border border-gray-300 rounded-md px-3 py-2 font-mono text-sm" placeholder="Paste your HTML here..."></textarea>
+                </div>
+
+                <!-- URL Input -->
+                <div id="tab-url" class="tab-content hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+                    <input type="url" id="urlInput" class="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="https://example.com/design.png">
+                </div>
+
+                <!-- Upload Input -->
+                <div id="tab-upload" class="tab-content hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Upload Image</label>
+                    <input type="file" id="fileInput" accept="image/*" class="w-full border border-gray-300 rounded-md px-3 py-2">
+                    <div id="uploadPreview" class="mt-2 hidden">
+                        <img id="previewImg" class="max-h-48 rounded border">
+                    </div>
+                </div>
+
+                <!-- Provider Selection -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">AI Provider</label>
+                        <select id="provider" class="w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="openai">OpenAI GPT-4o</option>
+                            <option value="anthropic">Anthropic Claude</option>
+                            <option value="google">Google Gemini</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Design Type</label>
+                        <select id="designType" class="w-full border border-gray-300 rounded-md px-3 py-2">
+                            <option value="email">Email Newsletter</option>
+                            <option value="landing_page">Landing Page</option>
+                            <option value="dashboard">Dashboard</option>
+                            <option value="mobile_app">Mobile App</option>
+                            <option value="web_app">Web Application</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- API Key (BYOK) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        API Key <span class="text-gray-400">(BYOK - your key stays in browser)</span>
+                    </label>
+                    <input type="password" id="apiKey" class="w-full border border-gray-300 rounded-md px-3 py-2" placeholder="sk-... or your provider's API key">
+                    <p class="text-xs text-gray-500 mt-1">Keys are sent directly to the AI provider, never stored.</p>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 font-medium">
+                    Analyze Design
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+            <p class="mt-2 text-gray-600">Analyzing your design...</p>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="hidden bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-900">Design Critique</h2>
+                <div class="text-center">
+                    <div id="overallScore" class="score-badge text-xl"></div>
+                    <p class="text-xs text-gray-500 mt-1">Overall</p>
+                </div>
+            </div>
+
+            <div id="summary" class="bg-gray-50 rounded-md p-4 mb-6 text-gray-700"></div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h3 class="font-semibold text-green-700 mb-2">Strengths</h3>
+                    <ul id="strengths" class="space-y-1 text-sm"></ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-orange-700 mb-2">Improvements</h3>
+                    <ul id="improvements" class="space-y-1 text-sm"></ul>
+                </div>
+            </div>
+
+            <h3 class="font-semibold text-gray-900 mb-3">Detailed Scores</h3>
+            <div id="scores" class="space-y-4"></div>
+
+            <div class="mt-6 pt-4 border-t text-xs text-gray-400">
+                Analyzed by <span id="modelInfo"></span>
+            </div>
+        </div>
+
+        <!-- Error -->
+        <div id="error" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 text-red-700"></div>
+    </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                    b.classList.add('border-transparent', 'text-gray-500');
+                });
+                btn.classList.add('active', 'border-blue-500', 'text-blue-600');
+                btn.classList.remove('border-transparent', 'text-gray-500');
+
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+            });
+        });
+
+        // File upload preview
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('uploadPreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form submission
+        document.getElementById('critiqueForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const error = document.getElementById('error');
+            const submitBtn = document.getElementById('submitBtn');
+
+            loading.classList.remove('hidden');
+            results.classList.add('hidden');
+            error.classList.add('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+                const payload = {
+                    provider: document.getElementById('provider').value,
+                    design_type: document.getElementById('designType').value,
+                    api_key: document.getElementById('apiKey').value || null,
+                };
+
+                if (activeTab === 'html') {
+                    payload.html = document.getElementById('htmlInput').value;
+                } else if (activeTab === 'url') {
+                    payload.image_url = document.getElementById('urlInput').value;
+                } else if (activeTab === 'upload') {
+                    const file = document.getElementById('fileInput').files[0];
+                    if (file) {
+                        payload.image_base64 = await fileToBase64(file);
+                    }
+                }
+
+                const response = await fetch('/api/critique', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Request failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (err) {
+                error.textContent = err.message;
+                error.classList.remove('hidden');
+            } finally {
+                loading.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        });
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+            });
+        }
+
+        function getScoreClass(score) {
+            if (score <= 4) return 'score-low';
+            if (score <= 7) return 'score-mid';
+            return 'score-high';
+        }
+
+        function displayResults(data) {
+            const results = document.getElementById('results');
+
+            // Overall score
+            const overallScore = document.getElementById('overallScore');
+            overallScore.textContent = data.overall_score;
+            overallScore.className = 'score-badge text-xl ' + getScoreClass(data.overall_score);
+
+            // Summary
+            document.getElementById('summary').textContent = data.summary;
+
+            // Strengths
+            const strengthsList = document.getElementById('strengths');
+            strengthsList.innerHTML = data.strengths.map(s =>
+                `<li class="flex items-start"><span class="text-green-500 mr-2">✓</span>${s}</li>`
+            ).join('');
+
+            // Improvements
+            const improvementsList = document.getElementById('improvements');
+            improvementsList.innerHTML = data.improvements.map(i =>
+                `<li class="flex items-start"><span class="text-orange-500 mr-2">→</span>${i}</li>`
+            ).join('');
+
+            // Detailed scores
+            const scoresDiv = document.getElementById('scores');
+            scoresDiv.innerHTML = data.scores.map(s => `
+                <div class="border rounded-md p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-medium capitalize">${s.category.replace(/_/g, ' ')}</span>
+                        <span class="score-badge text-sm ${getScoreClass(s.score)}">${s.score}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-2">${s.feedback}</p>
+                    ${s.suggestions.length ? `
+                        <ul class="text-xs text-gray-500 space-y-1">
+                            ${s.suggestions.map(sg => `<li>• ${sg}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                </div>
+            `).join('');
+
+            // Model info
+            document.getElementById('modelInfo').textContent = `${data.provider} (${data.model})`;
+
+            results.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
