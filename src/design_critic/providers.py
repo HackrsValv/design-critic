@@ -27,6 +27,8 @@ class BaseProvider(ABC):
         focus_areas: list[str],
         custom_prompt: str | None,
         api_key: str | None,
+        base_url: str | None = None,
+        model_override: str | None = None,
     ) -> CritiqueResponse:
         """Generate design critique from image."""
         pass
@@ -63,17 +65,24 @@ class OpenAIProvider(BaseProvider):
         focus_areas: list[str],
         custom_prompt: str | None,
         api_key: str | None,
+        base_url: str | None = None,
+        model_override: str | None = None,
     ) -> CritiqueResponse:
         key = api_key or settings.openai_api_key
         if not key:
             raise ValueError("OpenAI API key required. Provide via api_key or OPENAI_API_KEY env var.")
 
-        client = openai.AsyncOpenAI(api_key=key)
+        # Support custom base URL (for OpenRouter, proxies, etc.)
+        url = base_url or settings.openai_base_url
+        client = openai.AsyncOpenAI(api_key=key, base_url=url) if url else openai.AsyncOpenAI(api_key=key)
+
+        # Use model override if provided
+        model_to_use = model_override or self.model
 
         prompt = build_critique_prompt(design_type, focus_areas, custom_prompt)
 
         response = await client.chat.completions.create(
-            model=self.model,
+            model=model_to_use,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {
@@ -101,7 +110,7 @@ class OpenAIProvider(BaseProvider):
             strengths=data["strengths"],
             improvements=data["improvements"],
             provider=self.provider,
-            model=self.model,
+            model=model_to_use,
         )
 
 
@@ -118,6 +127,8 @@ class AnthropicProvider(BaseProvider):
         focus_areas: list[str],
         custom_prompt: str | None,
         api_key: str | None,
+        base_url: str | None = None,
+        model_override: str | None = None,
     ) -> CritiqueResponse:
         key = api_key or settings.anthropic_api_key
         if not key:
@@ -125,12 +136,17 @@ class AnthropicProvider(BaseProvider):
                 "Anthropic API key required. Provide via api_key or ANTHROPIC_API_KEY env var."
             )
 
-        client = anthropic.AsyncAnthropic(api_key=key)
+        # Support custom base URL (for OpenRouter, proxies, etc.)
+        url = base_url or settings.anthropic_base_url
+        client = anthropic.AsyncAnthropic(api_key=key, base_url=url) if url else anthropic.AsyncAnthropic(api_key=key)
+
+        # Use model override if provided
+        model_to_use = model_override or self.model
 
         prompt = build_critique_prompt(design_type, focus_areas, custom_prompt)
 
         response = await client.messages.create(
-            model=self.model,
+            model=model_to_use,
             max_tokens=2000,
             system=SYSTEM_PROMPT,
             messages=[
@@ -161,7 +177,7 @@ class AnthropicProvider(BaseProvider):
             strengths=data["strengths"],
             improvements=data["improvements"],
             provider=self.provider,
-            model=self.model,
+            model=model_to_use,
         )
 
 
@@ -178,6 +194,8 @@ class GoogleProvider(BaseProvider):
         focus_areas: list[str],
         custom_prompt: str | None,
         api_key: str | None,
+        base_url: str | None = None,
+        model_override: str | None = None,
     ) -> CritiqueResponse:
         key = api_key or settings.google_api_key
         if not key:
@@ -186,7 +204,10 @@ class GoogleProvider(BaseProvider):
             )
 
         genai.configure(api_key=key)
-        model = genai.GenerativeModel(self.model)
+
+        # Use model override if provided
+        model_to_use = model_override or self.model
+        model = genai.GenerativeModel(model_to_use)
 
         prompt = f"{SYSTEM_PROMPT}\n\n{build_critique_prompt(design_type, focus_areas, custom_prompt)}"
 
@@ -215,7 +236,7 @@ class GoogleProvider(BaseProvider):
             strengths=data["strengths"],
             improvements=data["improvements"],
             provider=self.provider,
-            model=self.model,
+            model=model_to_use,
         )
 
 

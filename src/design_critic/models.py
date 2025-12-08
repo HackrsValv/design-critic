@@ -32,6 +32,10 @@ class CritiqueRequest(BaseModel):
     # Provider configuration
     provider: Provider = Field(default=Provider.OPENAI, description="AI provider to use")
     api_key: str | None = Field(default=None, description="Your API key (BYOK)")
+    base_url: str | None = Field(
+        default=None, description="Custom API base URL (e.g., OpenRouter, local proxy)"
+    )
+    model: str | None = Field(default=None, description="Override default model")
 
     # Critique options
     design_type: str = Field(

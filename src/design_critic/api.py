@@ -122,6 +122,8 @@ async def critique_design(request: CritiqueRequest):
             focus_areas=request.focus_areas,
             custom_prompt=request.custom_prompt,
             api_key=request.api_key,
+            base_url=request.base_url,
+            model_override=request.model,
         )
 
         return result

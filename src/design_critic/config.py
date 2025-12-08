@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     google_api_key: str | None = Field(default=None, alias="GOOGLE_API_KEY")
 
+    # Optional custom base URLs (for OpenRouter, proxies, etc.)
+    openai_base_url: str | None = Field(default=None, alias="OPENAI_BASE_URL")
+    anthropic_base_url: str | None = Field(default=None, alias="ANTHROPIC_BASE_URL")
+
     model_config = {"env_prefix": "DESIGN_CRITIC_", "env_file": ".env"}
 
 
