@@ -4,6 +4,10 @@ AI-powered design critique tool with BYOK (Bring Your Own Key) support.
 
 Upload a design screenshot, paste HTML, or provide an image URL - get instant, actionable feedback on your design from GPT-4o, Claude, or Gemini.
 
+## Demo
+
+![Demo](demo.gif)
+
 ## Features
 
 - **Multiple Input Types**: Upload images, paste HTML (auto-rendered to screenshot), or provide image URLs
